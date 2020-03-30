@@ -1,5 +1,4 @@
 int RandBag[7];
-int numbersLeft = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -15,11 +14,10 @@ void loop() {
   delay(800);
 }
 
-void SequenceGenerator() {
-  //BUG- currently places the "1" value at the end of the RandBag array always. 
+void SequenceGenerator() { 
   //initialize array to shuffle
-  int newRandBag[7];
-  numbersLeft=7;
+  int numbersLeft=7;
+  int newRandBag[numbersLeft];
   for(int i=0; i<numbersLeft; i++) {
     newRandBag[i]=i+1;
   }
@@ -29,9 +27,13 @@ void SequenceGenerator() {
     RandBag[numbersLeft-1]=newRandBag[r];
     newRandBag[r]=newRandBag[--numbersLeft];
   }
+  //Force rearranges last digit
+  int x=random(10,59)/10;
+  int temp=RandBag[x];
+  RandBag[x]=RandBag[6];
+  RandBag[6]=temp;
   //Resets randomization seed for next sequence run
   if(numbersLeft==0) {
-    //Serial.println("New Sequence");
     int newRand=random(0,9999);
     randomSeed(newRand);
   }
