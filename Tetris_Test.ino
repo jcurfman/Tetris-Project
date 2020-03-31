@@ -3,6 +3,9 @@
 
 int boardArray[200]; //Standard Tetris field is a 10x20 column
 int ActivePiece[4]; //Stores pixel locations of active (dropping) Tetromino
+int RandBag[7]; //Random Sequence Generated Drawbag
+
+int bagLeft=0;
 
 #define resetPin 12 //Jumper from pin 12 to RESET pin
 #define NumPieces 7
@@ -12,6 +15,7 @@ void setup() {
   Serial.begin(9600);
   pinMode(resetPin, INPUT);
   digitalWrite(resetPin, LOW);
+  randomSeed(analogRead(A0)); //Unconnected to anything- aids initial randomization
   Serial.println("");
   Serial.println("Begin Tetris Test");
   SerialPrintGame();
@@ -98,8 +102,14 @@ bool CollisionCheck() {
 }
 
 void NewBlock() {
-  //Currently generates a single I block
-  int blockChoice=random(1,5); //Replace with RandBag Generator function
+  //Picks a block based on a psuedo-random sequence generator
+  if(bagLeft==0) {
+    SequenceGenerator();
+    bagLeft=7;
+  }
+  int blockChoice=RandBag[bagLeft-1];
+  bagLeft--;
+  //int blockChoice=random(1,7); //Replace with RandBag Generator function
   if(blockChoice==1) {
     //Generates I block
     ActivePiece[0]=35;
@@ -136,12 +146,27 @@ void NewBlock() {
     ActivePiece[3]=4;
     blockCheck(blockChoice);
   }
+  else if(blockChoice==6) {
+    ActivePiece[0]=13;
+    ActivePiece[1]=14;
+    ActivePiece[2]=15;
+    ActivePiece[3]=3;
+    blockCheck(blockChoice);
+  }
+  else if(blockChoice==7) {
+    ActivePiece[0]=14;
+    ActivePiece[1]=15;
+    ActivePiece[2]=16;
+    ActivePiece[3]=6;
+    blockCheck(blockChoice);
+  }
 }
 
 void blockCheck(int blockChoice) {
   for(int i=0; i<4; i++) {
     if(boardArray[ActivePiece[i]]!=0) {
       Serial.println("Game Over");
+      delay(100);
       pinMode(resetPin, OUTPUT); //Reset system
       while(1);
     }
@@ -149,4 +174,30 @@ void blockCheck(int blockChoice) {
       boardArray[ActivePiece[i]]=blockChoice;
     }
   }
+}
+
+void SequenceGenerator() { 
+  //Shuffles a sequence into psuedo-random order
+  randomSeed(random(0,9999)); //Further randomizes from previous sequences
+  int numbersLeft=7;
+  int newRandBag[numbersLeft];
+  for(int i=0; i<numbersLeft; i++) {
+    newRandBag[i]=i+1;
+  }
+  //Shuffle, picking from remaining numbers
+  while (numbersLeft > 0) {
+    int r=random(0, numbersLeft);
+    RandBag[numbersLeft-1]=newRandBag[r];
+    newRandBag[r]=newRandBag[--numbersLeft];
+  }
+  //Force rearranges last digit
+  int x=random(10,59)/10;
+  int temp=RandBag[x];
+  RandBag[x]=RandBag[6];
+  RandBag[6]=temp;
+  //Resets randomization seed for next sequence run
+  //if(numbersLeft==0) {
+    //int newRand=random(0,9999);
+    //randomSeed(newRand);
+  //}
 }
