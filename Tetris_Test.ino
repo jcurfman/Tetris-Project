@@ -25,8 +25,7 @@ void setup() {
 void loop() {
   //Base ongoing logic of the game, run once per frame. 
   SerialPrintGame();
-  MoveDown();
-  //ActiveBlockDown();
+  ActiveBlockDown();
   Serial.println("");
   //delay is based loosely off speed of level 2 on NES Tetris.
   delay(800); //800 is playing default?
@@ -76,6 +75,9 @@ void ActiveBlockDown() {
   }
   //Generates a new block if no further motion is allowed
   else if(stopBlock==true) {
+    for(int i=0; i<4; i++) {
+      ActivePiece[i]=0;
+    }
     NewBlock();
     Serial.println("New Block");
   }
@@ -84,14 +86,39 @@ void ActiveBlockDown() {
 bool CollisionCheck() {
   //Routine to check for collision between active block and other blocks
   bool stopBlock=false;
+  int col[4];
+  int row[4];
   for(int i=0; i<4; i++) {
-    if(boardArray[ActivePiece[i]+10]!=0) {
-      if(ActivePiece[i]+10!=ActivePiece[i-1]) {
+    //Find columns and rows
+    row[i]=ActivePiece[i]/10;
+    col[i]=ActivePiece[i]-(row[i]*10);
+    Serial.print(col[i]);
+    Serial.print(", ");
+    Serial.println(row[i]);
+  }
+  //Detect active block false collisions- TEST. NOT WORKING WITH I BLOCK
+  for(int i=0; i<4; i++) {
+    for(int j=0; j<4; j++) {
+      if(col[i]==col[j] && row[i]==row[j]+1) {
+        Serial.println("Same block?");
+        row[j]=99;
+        col[j]=99;
+      }
+    }
+  }
+  //Detects collisions, ignoring false collisions from above
+  for(int i=0; i<4; i++) {
+    if(col[i]<99) {
+      if(boardArray[ActivePiece[i]+10]!=0) {
         stopBlock=true;
         Serial.println("Block Collision");
       }
     }
+    Serial.print(col[i]);
+    Serial.print(", ");
+    Serial.println(row[i]);
   }
+  
   //Checks for the bottom collision
   for(int k=0; k<4; k++) {
     if(ActivePiece[k]>189) {
@@ -195,9 +222,4 @@ void SequenceGenerator() {
   int temp=RandBag[x];
   RandBag[x]=RandBag[6];
   RandBag[6]=temp;
-  //Resets randomization seed for next sequence run
-  //if(numbersLeft==0) {
-    //int newRand=random(0,9999);
-    //randomSeed(newRand);
-  //}
 }
