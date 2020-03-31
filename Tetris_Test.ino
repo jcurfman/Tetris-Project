@@ -6,6 +6,7 @@ int ActivePiece[4]; //Stores pixel locations of active (dropping) Tetromino
 int RandBag[7]; //Random Sequence Generated Drawbag
 
 int bagLeft=0;
+int blockChoice=0; //Easier to access from disparate functions if global
 
 #define resetPin 12 //Jumper from pin 12 to RESET pin
 #define NumPieces 7
@@ -92,15 +93,23 @@ bool CollisionCheck() {
     //Find columns and rows
     row[i]=ActivePiece[i]/10;
     col[i]=ActivePiece[i]-(row[i]*10);
-    Serial.print(col[i]);
-    Serial.print(", ");
-    Serial.println(row[i]);
   }
-  //Detect active block false collisions- TEST. NOT WORKING WITH I BLOCK
+  //Detect active block false collisions
   for(int i=0; i<4; i++) {
     for(int j=0; j<4; j++) {
-      if(col[i]==col[j] && row[i]==row[j]+1) {
-        Serial.println("Same block?");
+      if(blockChoice==1) { 
+        //Troublesome edge case for I block
+        if(row[1]==row[2]) {
+          //Assume flat
+        }
+        else if(col[1]==col[2]) {
+          //Assume vertical
+          for(int k=1; k<4; k++) {
+            col[k]=99;
+          }
+        }
+      }
+      else if(col[i]==col[j] && row[i]==row[j]+1) {
         row[j]=99;
         col[j]=99;
       }
@@ -111,12 +120,9 @@ bool CollisionCheck() {
     if(col[i]<99) {
       if(boardArray[ActivePiece[i]+10]!=0) {
         stopBlock=true;
-        Serial.println("Block Collision");
+        //Serial.println("Block Collision");
       }
     }
-    Serial.print(col[i]);
-    Serial.print(", ");
-    Serial.println(row[i]);
   }
   
   //Checks for the bottom collision
@@ -134,7 +140,7 @@ void NewBlock() {
     SequenceGenerator();
     bagLeft=7;
   }
-  int blockChoice=RandBag[bagLeft-1];
+  blockChoice=RandBag[bagLeft-1];
   bagLeft--;
   //int blockChoice=random(1,7); //Replace with RandBag Generator function
   if(blockChoice==1) {
