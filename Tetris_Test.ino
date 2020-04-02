@@ -7,15 +7,32 @@ int RandBag[7]; //Random Sequence Generated Drawbag
 
 int bagLeft=0;
 int blockChoice=0; //Easier to access from disparate functions if global
+int col[4]; //Easier to access from disparate functions if global
+int row[4]; //^ditto
 
 #define resetPin 12 //Jumper from pin 12 to RESET pin
-#define NumPieces 7
+#define leftButton 2 //left button input
+#define rightButton 3 //right button input
+#define rotateButton 4 //rotation button input
+
+const int debounceDelay=200;
+//Changing variables for each button for non-interrupt debouncing
+volatile unsigned long lastLeft_micros;
+volatile unsigned long lastRight_micros;
+volatile unsigned long lastRotate_micros;
 
 void setup() {
   //Begin serial output. Prints an empty field and generates a block to start.
   Serial.begin(9600);
   pinMode(resetPin, INPUT);
   digitalWrite(resetPin, LOW);
+  pinMode(leftButton, INPUT_PULLUP);
+  pinMode(rightButton, INPUT_PULLUP);
+  pinMode(rotateButton, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(leftButton), debounceLeft, RISING);
+  attachInterrupt(digitalPinToInterrupt(rightButton), debounceRight, RISING);
+  //attachInterrupt(digitalPinToInterrupt(rotateButton), debounceRotate, RISING);
+  //Uno only has two external interrupts
   randomSeed(analogRead(A0)); //Unconnected to anything- aids initial randomization
   Serial.println("");
   Serial.println("Begin Tetris Test");
@@ -24,15 +41,20 @@ void setup() {
 }
 
 void loop() {
-  //Base ongoing logic of the game, run once per frame. 
-  SerialPrintGame();
-  ActiveBlockDown();
-  Serial.println("");
-  //delay is based loosely off speed of level 2 on NES Tetris.
-  delay(800); //800 is playing default?
+  //Base ongoing logic of the game
+  static unsigned long timer=millis();
+  if(millis()-timer>800) {
+    //This section run once per frame
+    //800 ms based loosely off speed of level 2 on NES Tetris
+    SerialPrintGame();
+    ActiveBlockDown();
+    Serial.println("");
+    timer=millis();
+  }
 }
 
 void SerialPrintGame() {
+  Serial.println("");
   //Prints game field to serial output, for troubleshooting purposes
   for(int i=0; i<(sizeof(boardArray)/sizeof(boardArray[0])); i++) {
     Serial.print("[");
@@ -45,28 +67,103 @@ void SerialPrintGame() {
   Serial.println("");
 }
 
-void MoveDown() {
-  //Deeply flawed. Moves all floating pieces down
-  for(int i=(sizeof(boardArray)/sizeof(boardArray[0]))-1; i>=0; i--) {
-    if(boardArray[i]==0 && boardArray[i-10]!=0) {
-      if(i<10) {
-        break;
-      }
-      boardArray[i]=boardArray[i-10];
-      boardArray[i-10]=0;
-    }
-    else if(boardArray[i]!=0) {
-      NewBlock();
-      Serial.println("New Block");
+//Need to implement interrupt for debouncing
+//Uno only has two external interrupts
+void debounceLeft() {
+  if((long)(micros()-lastLeft_micros)>=debounceDelay*1000) {
+    if(digitalRead(leftButton)==LOW) {
+      controlMove(1);
+      lastLeft_micros=micros();
     }
   }
+}
+
+void debounceRight() {
+  if((long)(micros()-lastRight_micros)>=debounceDelay*1000) {
+    if(digitalRead(rightButton)==LOW) {
+      controlMove(2);
+      lastRight_micros=micros();
+    }
+  }
+}
+
+void debounceRotate() {
+  if((long)(micros()-lastRotate_micros)>=debounceDelay*1000) {
+    if(digitalRead(rotateButton)==LOW) {
+      controlMove(4);
+      lastRotate_micros=micros();
+    }
+  }
+}
+
+void controlMove(int choice) {
+  bool canMove=true;
+  if(choice==1) {
+    //Move left
+    Serial.println("Left");
+    for(int i=0; i<4; i++) {
+      if(ActivePiece[i]%10==0) {
+        //Wall collision
+        Serial.println("Wall");
+        canMove=false;
+      }
+      else if(boardArray[ActivePiece[i]-1]!=0) {
+        //Block collision- CURRENTLY DISABLED
+        detectFalse(2);
+        Serial.println("Occupied");
+        //canMove=false;
+      }
+    }
+    if(canMove==true) {
+      Serial.println("Go");
+      for(int i=0; i<4; i++) {
+        boardArray[ActivePiece[i]]=0;
+        Serial.print(ActivePiece[i]);
+        --ActivePiece[i];
+        boardArray[ActivePiece[i]]=blockChoice;
+        Serial.print(" to ");
+        Serial.println(ActivePiece[i]);
+      }
+    }
+  }
+  if(choice==2) {
+    //Move right
+    Serial.println("Right");
+    for(int i=0; i<4; i++) {
+      if(ActivePiece[i]%10==9) {
+        //Wall collision
+        Serial.println("Wall");
+        canMove=false;
+      }
+      else if(boardArray[ActivePiece[i]-1]!=0) {
+        //Block collision- CURRENTLY DISABLED
+        Serial.println("Occupied");
+        //canMove=false;
+      }
+    }
+    if(canMove=true) {
+      Serial.println("Go");
+      for(int i=0; i<4; i++) {
+        boardArray[ActivePiece[i]]=0;
+        Serial.print(ActivePiece[i]);
+        ++ActivePiece[i];
+        boardArray[ActivePiece[i]]=blockChoice;
+        Serial.print(" to ");
+        Serial.println(ActivePiece[i]);
+      }
+    }
+  }
+  if(choice==4) {
+    //Rotate
+    Serial.println("Rotate");
+  }
+  SerialPrintGame();
 }
 
 void ActiveBlockDown() {
   //Runs a collision check, then moves the active piece down if allowed
   bool stopBlock=CollisionCheck();
   if(stopBlock==false) {
-    //Collision Check very broken
     for(int i=0; i<4; i++) {
       int val=boardArray[ActivePiece[i]];
       boardArray[ActivePiece[i]]=0;
@@ -80,14 +177,65 @@ void ActiveBlockDown() {
       ActivePiece[i]=0;
     }
     NewBlock();
-    Serial.println("New Block");
+  }
+}
+
+void detectFalse(int choice) {
+  //Checks and clears false collisions from active block
+  //Depends on first active index values being lowermost or leftmost
+  for(int i=0; i<4; i++) {
+    //Find columns and rows
+    row[i]=ActivePiece[i]/10;
+    col[i]=ActivePiece[i]-(row[i]*10);
+  }
+  //Three sides-bottom, left, right
+  if(choice==1) {
+    //Detect downwards
+    for(int i=0; i<4; i++) {
+      for(int j=0; j<4; j++) {
+        if(blockChoice==1) {
+          //Troublesome edge case fix for I block
+          if(col[1]==col[2]) {
+            //Assume vertical
+            for(int k=1; k<4; k++) {
+              col[k]=99;
+            }
+          }
+        }
+        else if(col[i]==col[j] && row[i]==row[j]+1) {
+          row[j]=99;
+          col[j]=99;
+        }
+      }
+    }
+  }
+  if(choice==2) {
+    //Detect leftwards
+    for(int i=0; i<4; i++) {
+      for(int j=0; j<4; j++) {
+        if(blockChoice==1) {
+          //Still troublesome
+          if(row[1]==row[2]) {
+            //Assume horizontal
+            for(int k=1; k<4; k++) {
+              col[k]=99;
+            }
+          }
+        }
+        else if(row[i]==row[j] && col[i]==col[j]+1) {
+          row[j]=99;
+          col[j]=99;
+        }
+      }
+    }
   }
 }
 
 bool CollisionCheck() {
   //Routine to check for collision between active block and other blocks
   bool stopBlock=false;
-  int col[4];
+  detectFalse(1); //Checks for false collisions
+  /*int col[4];
   int row[4];
   for(int i=0; i<4; i++) {
     //Find columns and rows
@@ -114,7 +262,7 @@ bool CollisionCheck() {
         col[j]=99;
       }
     }
-  }
+  }*/
   //Detects collisions, ignoring false collisions from above
   for(int i=0; i<4; i++) {
     if(col[i]<99) {
@@ -124,7 +272,6 @@ bool CollisionCheck() {
       }
     }
   }
-  
   //Checks for the bottom collision
   for(int k=0; k<4; k++) {
     if(ActivePiece[k]>189) {
@@ -141,8 +288,7 @@ void NewBlock() {
     bagLeft=7;
   }
   blockChoice=RandBag[bagLeft-1];
-  bagLeft--;
-  //int blockChoice=random(1,7); //Replace with RandBag Generator function
+  bagLeft--; 
   if(blockChoice==1) {
     //Generates I block
     ActivePiece[0]=35;
