@@ -6,4 +6,5 @@ The random bag test sketch is a standalone psuedo-random sequence generator, att
 The audio test sketch is a standalone investigation into the potential use of sound effects and backing music synced to the onscreen game. This is not likely to be integrated into the main script until further into development, and sound effects will not be provided in this repository.
 
 Tetris Guideline: https://tetris.wiki/Tetris_Guideline
+
 These guidelines are to be used for inspiration and troubleshooting of the base mechanics of this project.
