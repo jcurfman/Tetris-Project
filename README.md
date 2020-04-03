@@ -16,5 +16,8 @@ This audio test sketch is a standalone investigation into the potential use of s
 #### WS2812b_LED_Test
 This sketch has little to do with the main scripts, and was largely written in order to familiarize myself with these particular LED's and the FastLED Arduino library. It is nevertheless here for posterity.
 
+#### Tetris_LED_Wrap_Test
+In the design of the LED Pixel grid, the even rows are wired in reverse from the array logic of the base Tetris code. This sketch was designed in order to remedy this problem in software.
+
 ## Resources
 [Tetris Guideline](https://tetris.wiki/Tetris_Guideline) -These guidelines are to be used for inspiration and troubleshooting of the base mechanics of this project.
