@@ -19,5 +19,8 @@ This sketch has little to do with the main scripts, and was largely written in o
 #### Tetris_LED_Wrap_Test
 In the design of the LED Pixel grid, the even rows are wired in reverse from the array logic of the base Tetris code. This sketch was designed in order to remedy this problem in software.
 
+#### Tetris_LED_and_Rotation
+This sketch uses much of the previously developed framework to generate a random sequence of tetrominos and display them on a 4x4 LED pixel display in proper color. This then will be a helpful framework to troubleshoot tetromino rotation before integrating these facets of the project back into the main code.
+
 ## Resources
 [Tetris Guideline](https://tetris.wiki/Tetris_Guideline) -These guidelines are to be used for inspiration and troubleshooting of the base mechanics of this project.
