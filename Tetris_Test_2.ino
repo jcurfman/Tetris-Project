@@ -32,6 +32,10 @@ class Block {
       rotation=1;
     }
   }
+  void resetRotate() {
+    //to be called when creating new block
+    rotation=1;
+  }
 
   //Data return functions
   int getPosition(int index) {
@@ -49,13 +53,21 @@ class Block {
 };
 //BLOCK CLASS ENDS HERE------------------------------
 
-int boardArray[200]; //Standard Tetris field is a 10x20 column
+#include <FastLED.h>
+
+//Field Size Definition- standard tetris field is a 10x20 column
+#define width 10
+#define height 20
+
+int boardArray[width*height]; //Array for playfield
 int RandBag[7]; //Random generated sequence drawbag
+int rgb[3];
 
 int bagLeft=0;
 Block activeBlock;
 
 #define resetPin 12 //jumper from pin 12 to RESET pin
+#define ledPin 7 //WS2812b strip data pin
 #define leftButton 2 //left button input
 #define rightButton 3 //right button input
 #define rotateButton 4 //rotation button input
@@ -66,9 +78,14 @@ volatile unsigned long lastLeft_micros;
 volatile unsigned long lastRight_micros;
 volatile unsigned long lastRotate_micros;
 
+const int numLed=width*height;
+int fauxCounter=0;
+CRGB leds[numLed];
+
 void setup() {
   //Startup sequence. Begins serial output, prints an empty field, and generates a first block
   Serial.begin(9600);
+  FastLED.addLeds<WS2812, ledPin, GRB>(leds, numLed);
   pinMode(resetPin, INPUT);
   digitalWrite(resetPin, LOW);
   pinMode(leftButton, INPUT_PULLUP);
@@ -89,12 +106,12 @@ void setup() {
 
 void loop() {
   static unsigned long timer=millis();
-  Serial.println(timer/1000.0);
+  //Serial.println(timer);
   if(millis()-timer>800) {
     activeBlockDown();
+    serialPrintGame();
+    timer=millis();
   }
-  //activeBlockDown();
-  serialPrintGame();
 }
 
 void serialPrintGame() {
@@ -108,6 +125,67 @@ void serialPrintGame() {
     }
   }
   Serial.println("");
+}
+
+void ledUpdate() {
+  //Uncomment the serial print sections for block by block readout if troubleshooting
+  for(int i=0; i<(width*height); i++) {
+    blockColor(boardArray[i]);
+    int ledPosition=zigzagUpdate(i);
+    leds[ledPosition]=CRGB(rgb[0],rgb[1],rgb[2]);
+  }
+  FastLED.show();
+  delay(50);
+}
+
+void blockColor(int type) {
+  //uses the block type in order to set the rgb values
+  if(type==1) {
+    rgb[0]=40;
+    rgb[1]=100;
+    rgb[2]=255;
+  }
+  else if(type==2) {
+    rgb[0]=158;
+    rgb[1]=158;
+    rgb[2]=0;
+  }
+  else if(type==3) {
+    rgb[0]=128;
+    rgb[1]=0;
+    rgb[2]=156;
+  }
+  else if(type==4) {
+    rgb[0]=0;
+    rgb[1]=255;
+    rgb[2]=0;
+  }
+  else if(type==5) {
+    rgb[0]=255;
+    rgb[1]=0;
+    rgb[2]=0;
+  }
+  else if(type==6) {
+    rgb[0]=0;
+    rgb[1]=0;
+    rgb[2]=255;
+  }
+  else if(type==7) {
+    rgb[0]=255;
+    rgb[1]=140;
+    rgb[2]=0;
+  }
+  else if(type==0) {
+    rgb[0]=0;
+    rgb[1]=0;
+    rgb[2]=0;
+  }
+  
+  //Comment out for full brightness
+  /*for(int i=0; i<3; i++) {
+    int temp=rgb[i];
+    rgb[i]=temp/2;
+  }*/
 }
 
 //Interrupt implementations
@@ -130,6 +208,7 @@ void debounceRight() {
 
 void controlMove(int choice) {
   bool stopBlock=collisionCheck();
+  Serial.println("");
   if(choice==1) {
     //Move Left
     Serial.println("Left");
@@ -142,7 +221,7 @@ void controlMove(int choice) {
     //Rotate block
     Serial.println("Rotate");
   }
-  serialPrintGame();
+  //serialPrintGame();
 }
 
 void activeBlockDown() {
@@ -152,7 +231,7 @@ void activeBlockDown() {
     for(int i=0; i<4; i++) {
       int val=activeBlock.getPosition(i);
       boardArray[val]=0;
-      val+=10;
+      val+=width;
       activeBlock.addPosition(i,val);
       boardArray[val]=activeBlock.getBlockChoice();
     }
@@ -174,8 +253,8 @@ bool collisionCheck() {
   int row[4];
   for(int i=0; i<4; i++) {
     //Find rows and columns
-    row[i]=activeBlock.getPosition(i)/10;
-    col[i]=activeBlock.getPosition(i)-(row[i]*10);
+    row[i]=activeBlock.getPosition(i)/width;
+    col[i]=activeBlock.getPosition(i)-(row[i]*width);
   }
   //Detect false self collisions
   for(int i=0; i<4; i++) {
@@ -198,7 +277,7 @@ bool collisionCheck() {
   //Detects collisions, throwing out the false collisions from above
   for(int i=0; i<4; i++) {
     if(col[i]<99) {
-      if(boardArray[activeBlock.getPosition(i)+10]!=0) {
+      if(boardArray[activeBlock.getPosition(i)+width]!=0) {
         stopBlock=true;
       }
     }
@@ -279,6 +358,7 @@ void newBlock() {
     activeBlock.addPosition(3,6);
     blockCheck();
   }
+  activeBlock.resetRotate();
 }
 
 void blockCheck() {
@@ -314,4 +394,30 @@ void sequenceGenerator() {
   int temp=RandBag[x];
   RandBag[x]=RandBag[6];
   RandBag[6]=temp;
+}
+
+int zigzagUpdate(int counter) {
+  //Adjusts counter value in order to properly display correct pixel
+  //Serial.print("Counter is ");
+  //Serial.println(counter);
+  int row=counter/width;
+  int column=counter-(row*width);
+  if(row%2==1) {
+    //If the row is odd, need to shift
+    //Serial.println("Odd- shift");
+    if(column%width==0) {
+      //sets fauxCounter value to one row ahead
+      fauxCounter=counter+(width-1);
+    }
+    else {
+      //iterates fauxCounter value down
+      fauxCounter--;
+    }
+  }
+  else {
+    //Even row, direct counter value
+    fauxCounter=counter;
+  }
+  //Serial.println(fauxCounter);
+  return fauxCounter;
 }
