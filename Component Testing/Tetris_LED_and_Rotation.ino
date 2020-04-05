@@ -113,12 +113,11 @@ void loop() {
 
 void ledUpdate() {
   //Uncomment the serial print sections for block by block readout if troubleshooting
-  blockColor();
-  //Need to make blockColor a more granular function for each pixel rather than each update
   for(int i=0; i<(width*height); i++) {
+    blockColor(boardArray[i]);
     int ledPosition=zigzagUpdate(i);
     if(boardArray[i]==0) {
-      leds[ledPosition]=CRGB(0,0,0);
+      leds[ledPosition]=CRGB(rgb[0],rgb[1],rgb[2]);
       /*Serial.print("Empty @ ");
       Serial.print(i);
       Serial.print(", ");
@@ -136,9 +135,8 @@ void ledUpdate() {
   delay(50);
 }
 
-void blockColor() {
+void blockColor(int type) {
   //uses the block type in order to set the rgb values
-  int type=activeBlock.getBlockChoice();
   if(type==1) {
     rgb[0]=40;
     rgb[1]=100;
@@ -174,7 +172,13 @@ void blockColor() {
     rgb[1]=140;
     rgb[2]=0;
   }
-  //Delete for full brightness
+  else if(type==0) {
+    rgb[0]=0;
+    rgb[1]=0;
+    rgb[2]=0;
+  }
+  
+  //Comment out for full brightness
   for(int i=0; i<3; i++) {
     int temp=rgb[i];
     rgb[i]=temp/2;
