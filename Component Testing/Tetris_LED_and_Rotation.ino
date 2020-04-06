@@ -73,7 +73,7 @@ Block activeBlock;
 const int numLed=width*height;
 int fauxCounter=0;
 
-const int debounceDelay(200);
+const int debounceDelay(50);
 //Changing variables for each button for debouncing
 volatile unsigned long lastRotate_micros;
 volatile unsigned long lastNew_micros;
@@ -96,11 +96,11 @@ void setup() {
   Serial.println("");
   Serial.println("Begin Tetris Test- LED and Rotation");
   serialPrintGame();
-  delay(1000);
+  delay(2000);
 }
 
-void loop() {
-  //Print next tetromino
+void LEDloop() {
+  //Print next tetromino after two seconds. LED Testing
   static unsigned long timer=millis();
   if(millis()-timer>2000) {
     newBlock();
@@ -109,6 +109,11 @@ void loop() {
     ledUpdate();
     timer=millis();
   }
+}
+
+void loop() {
+  //Rotation Testing. Serial print only when necessary in debounce
+  ledUpdate();
 }
 
 void ledUpdate() {
@@ -187,6 +192,7 @@ void blockColor(int type) {
 
 void serialPrintGame() {
   //Prints 4x4 field to serial output, for troubleshooting and development
+  Serial.println("");
   for(int i=0; i<(sizeof(boardArray)/sizeof(boardArray[0])); i++) {
     Serial.print("[");
     Serial.print(boardArray[i]);
@@ -202,15 +208,19 @@ void serialPrintGame() {
 //Interrupt implementations
 void debounceRotate() {
   if((long)(micros()-lastRotate_micros)>=debounceDelay*1000) {
-    if(digitalRead(rotateButton)==LOW) {
+    if(digitalRead(rotateButton)==HIGH) {
       Serial.println("Rotate");
+      blockRotate();
+      serialPrintGame();
     }
   }
 }
 void debounceNew() {
   if((long)(micros()-lastNew_micros)>=debounceDelay*1000) {
-    if(digitalRead(newBlockButton)==LOW) {
+    if(digitalRead(newBlockButton)==HIGH) {
       Serial.println("New Button");
+      newBlock();
+      serialPrintGame();
     }
   }
 }
@@ -229,26 +239,26 @@ void newBlock() {
   //Assigns initial indices for block type
   if(blockChoice==1) {
     //Generates I block
-    activeBlock.addPosition(0,2);
-    activeBlock.addPosition(1,6);
-    activeBlock.addPosition(2,10);
-    activeBlock.addPosition(3,14);
+    activeBlock.addPosition(0,4);
+    activeBlock.addPosition(1,5);
+    activeBlock.addPosition(2,6);
+    activeBlock.addPosition(3,7);
     blockCheck();
   }
   else if(blockChoice==2) {
     //Generates O block
     activeBlock.addPosition(0,5);
     activeBlock.addPosition(1,6);
-    activeBlock.addPosition(2,9);
-    activeBlock.addPosition(3,10);
+    activeBlock.addPosition(2,1);
+    activeBlock.addPosition(3,2);
     blockCheck();
   }
   else if(blockChoice==3) {
     //Generates T block
-    activeBlock.addPosition(0,5);
-    activeBlock.addPosition(1,6);
-    activeBlock.addPosition(2,7);
-    activeBlock.addPosition(3,2);
+    activeBlock.addPosition(0,4);
+    activeBlock.addPosition(1,5);
+    activeBlock.addPosition(2,6);
+    activeBlock.addPosition(3,1);
     blockCheck();
   }
   else if(blockChoice==4) {
@@ -261,10 +271,10 @@ void newBlock() {
   }
   else if(blockChoice==5) {
     //Generates Z block
-    activeBlock.addPosition(0,6);
-    activeBlock.addPosition(1,7);
-    activeBlock.addPosition(2,1);
-    activeBlock.addPosition(3,2);
+    activeBlock.addPosition(0,5);
+    activeBlock.addPosition(1,6);
+    activeBlock.addPosition(2,0);
+    activeBlock.addPosition(3,1);
     blockCheck();
   }
   else if(blockChoice==6) {
@@ -277,10 +287,10 @@ void newBlock() {
   }
   else if(blockChoice==7) {
     //Generates L block
-    activeBlock.addPosition(0,5);
-    activeBlock.addPosition(1,6);
-    activeBlock.addPosition(2,7);
-    activeBlock.addPosition(3,3);
+    activeBlock.addPosition(0,4);
+    activeBlock.addPosition(1,5);
+    activeBlock.addPosition(2,6);
+    activeBlock.addPosition(3,2);
     blockCheck();
   }
   activeBlock.resetRotate();
@@ -340,4 +350,45 @@ int zigzagUpdate(int counter) {
   }
   //Serial.println(fauxCounter);
   return fauxCounter;
+}
+
+void blockRotate() {
+  //Currently only designed for clockwise rotation
+  int rotaState=activeBlock.getRotation();
+  int type=activeBlock.getBlockChoice();
+  int activeIndices[4];
+  for(int i=0; i<4; i++) {
+    activeIndices[i]=activeBlock.getPosition(i);
+  }
+  if(type==1) {
+    if(rotaState==1) {
+      activeIndices[0]+=((2*width)+2);
+      activeIndices[1]+=(width+1);
+      activeIndices[2]+=0;
+      activeIndices[3]-=(width+1);
+    }
+    else if(rotaState==2) {
+      activeIndices[0]-=(width+2);
+      activeIndices[1]-=1;
+      activeIndices[2]+=width;
+      activeIndices[3]+=((2*width)+1);
+    }
+    else if(rotaState==3) {
+      activeIndices[0]+=(width+1);
+      activeIndices[1]+=0;
+      activeIndices[2]-=(width+1);
+      activeIndices[3]-=((2*width)+2);
+    }
+    else if(rotaState==4) {
+      activeIndices[0]-=((2*width)+1);
+      activeIndices[1]-=width;
+      activeIndices[2]+=1;
+      activeIndices[3]+=(width+2);
+    }
+  }
+  for(int i=0; i<4; i++) {
+    activeBlock.addPosition(i, activeIndices[i]);
+  }
+  blockCheck();
+  activeBlock.rotate();
 }
