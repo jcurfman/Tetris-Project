@@ -304,10 +304,10 @@ void newBlock() {
   //Assigns initial indices for block type
   if(blockChoice==1) {
     //Generates I block
-    activeBlock.addPosition(0,35);
-    activeBlock.addPosition(1,25);
+    activeBlock.addPosition(0,13);
+    activeBlock.addPosition(1,14);
     activeBlock.addPosition(2,15);
-    activeBlock.addPosition(3,5);
+    activeBlock.addPosition(3,16);
     blockCheck();
   }
   else if(blockChoice==2) {
@@ -336,10 +336,10 @@ void newBlock() {
   }
   else if(blockChoice==5) {
     //Generates Z block
-    activeBlock.addPosition(0,15);
-    activeBlock.addPosition(1,16);
-    activeBlock.addPosition(2,4);
-    activeBlock.addPosition(3,5);
+    activeBlock.addPosition(0,14);
+    activeBlock.addPosition(1,15);
+    activeBlock.addPosition(2,3);
+    activeBlock.addPosition(3,4);
     blockCheck();
   }
   else if(blockChoice==6) {
@@ -352,10 +352,10 @@ void newBlock() {
   }
   else if(blockChoice==7) {
     //Generates L block
-    activeBlock.addPosition(0,14);
-    activeBlock.addPosition(1,15);
-    activeBlock.addPosition(2,16);
-    activeBlock.addPosition(3,6);
+    activeBlock.addPosition(0,13);
+    activeBlock.addPosition(1,14);
+    activeBlock.addPosition(2,15);
+    activeBlock.addPosition(3,5);
     blockCheck();
   }
   activeBlock.resetRotate();
